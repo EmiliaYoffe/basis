@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מסך 3 - תרשים המערכים (קנבס חופשי)</title>
+    <style>
+        /* === צבעים ועיצוב בסיסי === */
+        :root {
+            --ipad-bg: #fdfbf7;
+            --army-green: #4a5c44;
+            --army-dark: #2c3628;
+            --army-light: #8b9c84;
+            --accent-yellow: #d4a017;
+            --text-dark: #2b2b2b;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-color: #d3d9d3;
+            background-image: url('bg-map.jpg'); background-size: cover; background-position: center;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .ipad-frame {
+            width: 100%; max-width: 1100px; height: 90vh; min-height: 750px;
+            background-color: #111; border-radius: 30px; padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+        }
+
+        .ipad-screen {
+            flex: 1; background-color: var(--ipad-bg);
+            border-radius: 15px; position: relative;
+            display: flex; flex-direction: column; padding: 30px; overflow-y: auto;
+        }
+
+        .screen-header {
+            border-bottom: 3px solid var(--army-light);
+            padding-bottom: 15px; margin-bottom: 15px;
+        }
+        .screen-title { color: var(--army-dark); margin: 0 0 5px 0; font-size: 28px; }
+        .screen-intro { font-size: 16px; color: #444; line-height: 1.4; margin: 0; }
+
+        /* ========================================================= */
+        /* ================= אזור השליטה שלך ======================= */
+        /* ========================================================= */
+        
+        /* הקנבס שעליו הכל מצויר. שומר על פרופורציות של מסך רחב */
+        .chart-canvas {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16 / 8; /* יחס רוחב/גובה של הקנבס */
+            margin: 10px auto;
+        }
+
+        /* הגדרת בסיס לכל פריט: ממורכזים בדיוק על הנקודה שנגדיר להם */
+        .chart-item {
+            position: absolute;
+            transform: translate(50%, -50%); /* גורם לכך שהמיקום יהיה מרכז התמונה */
+        }
+        
+        .chart-item img { width: 100%; display: block; }
+
+        /* --- 1. המערך המנהלתי (עיגול עליון) --- */
+        .item-admin {
+            width: 20%;     /* גודל התמונה */
+            top: 20%;       /* מרחק מלמעלה */
+            right: 25%;     /* מרחק מימין */
+        }
+
+        /* --- 2. חץ למטה --- */
+        .item-arr-down {
+            width: 15%;      /* גודל החץ */
+            top: 55%;       /* מרחק מלמעלה */
+            right: 25%;     /* בדיוק אותו מרחק מימין כמו העיגול, כדי שיהיו בקו ישר */
+        }
+
+        /* --- 3. המערך הלוחם (ריבוע) --- */
+        .item-combat {
+            width: 32%;     /* גודל הריבוע */
+            top: 85%;       /* מרחק מלמעלה (זהה לאליפסה כדי שיהיו בקו ישר) */
+            right: 25%;     /* באותו קו אופקי של העיגול והחץ למטה */
+        }
+
+        /* --- 4. חץ שמאלה --- */
+        .item-arr-left {
+            width: 8%;      /* גודל החץ */
+            top: 85%;       /* בדיוק באותו גובה של הריבוע והאליפסה */
+            right: 53%;     /* מרחק מימין - ממקם אותו בין הריבוע לאליפסה */
+        }
+
+        /* --- 5. המשימה (אליפסה) --- */
+        .item-mission {
+            width: 20%;     /* גודל האליפסה */
+            top: 85%;       /* באותו גובה של הריבוע */
+            right: 80%;     /* מרחק מימין (דוחף אותו שמאלה) */
+        }
+
+        /* ========================================================= */
+        /* ================= סוף אזור השליטה ======================= */
+        /* ========================================================= */
+
+        /* חיצי התרשים (לא לחיצים) */
+        .chart-arrow { pointer-events: none; opacity: 0.9; }
+
+        /* הגדרות לאלמנטים לחיצים */
+        .interactive-node { z-index: 5; cursor: pointer; }
+        .interactive-node img { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* אפקט Hover */
+        .interactive-node:hover img {
+            transform: scale(1.06);
+            filter: drop-shadow(0 0 15px rgba(212, 160, 23, 0.9));
+        }
+
+        /* מצב "לחוץ" (Active) */
+        .interactive-node.active img {
+            transform: scale(1.08); 
+            filter: drop-shadow(0 0 25px var(--accent-yellow)) brightness(1.05);
+            z-index: 10;
+        }
+
+        /* תיבת ההסברים למטה */
+        .info-panel {
+            background: white; border-right: 6px solid var(--accent-yellow);
+            padding: 20px 25px; font-size: 18px; border-radius: 8px; color: var(--text-dark);
+            min-height: 125px; transition: opacity 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: flex; align-items: center;
+            margin-top: auto; /* תמיד יידחף לתחתית המסך */
+            position: relative; z-index: 20;
+        }
+        .info-panel strong { font-size: 20px; display: block; margin-bottom: 5px; color: var(--army-green); }
+
+        /* ניווט תחתון */
+        .nav-bar {
+            background-color: var(--army-dark); color: white; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 3px solid var(--accent-yellow); border-radius: 0 0 15px 15px;
+        }
+        .nav-btn {
+            background-color: var(--accent-yellow); color: var(--army-dark);
+            border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;
+        }
+        .nav-btn:hover { background-color: #f1c40f; box-shadow: 0 0 15px rgba(212, 160, 23, 0.6); }
+        .page-indicator { font-weight: bold; font-size: 18px; color: var(--ipad-bg); }
+    </style>
+</head>
+<body>
+
+<div class="ipad-frame">
+    <div class="ipad-screen">
+        
+        <div class="screen-header">
+            <h2 class="screen-title">חלוקת הכוחות למערכים</h2>
+            <p class="screen-intro">כל גוף צבאי הממלא משימה או מסייע לה, משתייך למערך מסוים. המערכים מחולקים לשני סוגים עיקריים: לוחם ומנהלתי. חלוקה זו נעשית לצרכי בניין הכוח - אך בשדה הקרב כולם פועלים יחד להשגת המשימה.</p>
+        </div>
+
+        <div class="chart-canvas">
+            
+            <div class="chart-item item-admin interactive-node" id="node-admin" onclick="showInfo('admin')">
+                <img src="igul1.png" alt="מערך הסיוע המנהלתי">
+            </div>
+            
+            <div class="chart-item item-arr-down chart-arrow">
+                <img src="arrdown.png" alt="חץ כיוון מטה">
+            </div>
+            
+            <div class="chart-item item-combat interactive-node" id="node-combat" onclick="showInfo('combat')">
+                <img src="ribua.png" alt="המערך הלוחם">
+            </div>
+            
+            <div class="chart-item item-arr-left chart-arrow">
+                <img src="arr_left.png" alt="חץ כיוון שמאלה">
+            </div>
+
+            <div class="chart-item item-mission interactive-node" id="node-mission" onclick="showInfo('mission')">
+                <img src="elips.png" alt="המשימה והאויב">
+            </div>
+
+        </div>
+
+        <div id="info-box" class="info-panel" style="background: rgba(212, 160, 23, 0.1);">
+            <div style="width: 100%;">
+                <strong style="color: var(--army-dark);">הנחיות לתרשים:</strong>
+                התרשים שלפניכם מציג את השתלשלות המערכים. <strong>העבירו את העכבר ולחצו על חלקי התרשים</strong> כדי לקרוא על תפקידו של כל מערך בשרשרת הפיקוד הלחימתית.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-bar">
+        <button class="nav-btn" onclick="alert('חזור')">◀ אחורה</button>
+        <span class="page-indicator">מסך 3 מתוך 9</span>
+        <button class="nav-btn" onclick="alert('קדימה')">קדימה ▶</button>
+    </div>
+</div>
+
+<script>
+    const texts = {
+        'admin': "<strong>מערך הסיוע המנהלתי:</strong><br> מסגרת העל של כלל היחידות העוסקות בסיוע שאינו לחימתי ישיר (כגון לוגיסטיקה, רפואה, חימוש וכוח אדם). תכליתו המרכזית היא לאפשר את רציפות הלחימה של המערך הלוחם על ידי מתן תמיכה לוגיסטית ורציפה מאחור.",
+        'combat': "<strong>המערך הלוחם (מתמרן ומסייע):</strong><br> מורכב מהמערך המתמרן המסתער (שריון, חי\"ר, הנדסה) וממערך הסיוע הקרבי (תותחנים, איסוף קרבי). זהו המערך העיקרי המיועד לבצע את המשימות בשטח, פנים אל פנים מול האויב, באמצעות תמרון ואש.",
+        'mission': "<strong>המשימה / האויב:</strong><br> זוהי תכלית הקיום של כל המערכים. למרות שחלוקת הכוחות למערכים נועדה לבניין הכוח ולסדר ארגוני, בשדה הקרב האמיתי - המערך הלוחם והמערך המנהלתי פועלים כולם יחד, בסינרגיה מלאה, כיחידה אחת להשמדת האויב והשגת המשימה."
+    };
+
+    function showInfo(nodeId) {
+        document.querySelectorAll('.interactive-node').forEach(node => {
+            node.classList.remove('active');
+        });
+
+        const clickedNode = document.getElementById('node-' + nodeId);
+        clickedNode.classList.add('active');
+
+        const infoBox = document.getElementById('info-box');
+        infoBox.style.opacity = '0';
+        
+        setTimeout(() => {
+            infoBox.style.background = 'white';
+            infoBox.innerHTML = `<div style="width: 100%;">${texts[nodeId]}</div>`;
+            infoBox.style.opacity = '1'; 
+        }, 150);
+    }
+</script>
+</body>
+</html>

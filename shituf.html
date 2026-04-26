@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שיתוף בין-זרועי ובין-ארגוני - מסך 7</title>
+    <style>
+        /* === צבעים ועיצוב בסיסי === */
+        :root {
+            --ipad-bg: #fdfbf7;
+            --army-green: #4a5c44;
+            --army-dark: #2c3628;
+            --army-light: #8b9c84;
+            --accent-yellow: #d4a017;
+            --accent-glow: rgba(212, 160, 23, 0.8);
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-color: #d3d9d3;
+            background-image: url('bg-map.jpg'); background-size: cover; background-position: center;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* === מסגרת האייפד === */
+        .ipad-frame {
+            width: 100%; max-width: 1100px; height: 90vh; min-height: 750px;
+            background-color: #111; border-radius: 30px; padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+        }
+
+        /* רקע המשבצות (Blueprint) */
+        .ipad-screen {
+            flex: 1; background-color: var(--ipad-bg);
+            background-image: 
+                linear-gradient(rgba(139, 156, 132, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(139, 156, 132, 0.15) 1px, transparent 1px);
+            background-size: 25px 25px;
+            border-radius: 15px; position: relative;
+            display: flex; flex-direction: column; padding: 30px; overflow: hidden;
+        }
+
+        /* === כותרות === */
+        .screen-header {
+            border-bottom: 3px solid var(--army-light);
+            padding-bottom: 15px; margin-bottom: 5px; background: rgba(253, 251, 247, 0.8);
+            z-index: 10;
+        }
+        .screen-title { color: var(--army-dark); margin: 0 0 5px 0; font-size: 28px; }
+        .screen-intro { font-size: 16px; color: #444; line-height: 1.4; margin: 0; }
+
+        /* === מעטפת ליישור המכ"ם במרכז והקטנה === */
+        .radar-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* === מנגנון הרדאר המרכזי === */
+        .radar-container {
+            position: relative; width: 460px; height: 460px;
+            transform: scale(0.9); /* הקטנת הגרפיקה ב-10% כדי שלא תעלה על שום דבר */
+        }
+
+        /* קווי המעגלים */
+        .radar-ring {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border-radius: 50%; border: 2px solid var(--army-light);
+        }
+        .ring-outer { width: 460px; height: 460px; background: rgba(139, 156, 132, 0.08); }
+        .ring-inner { width: 280px; height: 280px; border-width: 3px; border-color: var(--army-green); background: rgba(139, 156, 132, 0.15); box-shadow: inset 0 0 20px rgba(74, 92, 68, 0.2); }
+        
+        /* קרן הסורק (Sweep) */
+        .radar-sweep {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%; pointer-events: none;
+            background: conic-gradient(from 0deg, transparent 70%, rgba(212, 160, 23, 0.4) 100%);
+            animation: spin 5s linear infinite; z-index: 1;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* טקסטים מעוקלים באמצעות SVG */
+        .curved-text-svg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 2;
+        }
+
+        /* === האייקונים / הכפתורים (Nodes) === */
+        .node {
+            position: absolute; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transform: translate(-50%, -50%); cursor: pointer;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .node-icon {
+            width: 50px; height: 50px; background: var(--army-dark); color: white;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            border: 3px solid var(--accent-yellow); box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: 0.3s;
+        }
+        .node-icon svg { width: 24px; height: 24px; fill: currentColor; }
+        
+        /* העיגול האמצעי גדול יותר */
+        .node-center .node-icon { width: 85px; height: 85px; border-width: 4px; box-shadow: 0 0 20px var(--accent-glow); }
+        .node-center .node-icon svg { width: 45px; height: 45px; }
+
+        .node-label {
+            margin-top: 8px; font-weight: bold; font-size: 15px;
+            color: var(--army-dark); background: rgba(253, 251, 247, 0.9);
+            padding: 2px 8px; border-radius: 10px; text-shadow: none; white-space: nowrap;
+        }
+
+        /* אפקטים במעבר עכבר (גדל וזוהר, אבל לא פותח טקסט) */
+        .node:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 20; }
+        .node:hover .node-icon { box-shadow: 0 0 25px var(--accent-glow); background: var(--army-green); }
+
+        /* מיקומים מדויקים */
+        .node-center { top: 50%; left: 50%; }
+        .node-air    { top: 50%; left: 19.5%; } 
+        .node-navy   { top: 50%; left: 80.5%; } 
+        .node-police { top: 15%; left: 15%; }   
+        .node-shabak { top: 15%; left: 85%; }   
+        .node-rescue { top: 85%; left: 15%; }   
+        .node-civil  { top: 85%; left: 85%; }   
+
+        /* === תיבת המידע התחתונה === */
+        .info-panel {
+            background: white; border-right: 6px solid var(--accent-yellow);
+            padding: 20px; font-size: 18px; border-radius: 8px; color: var(--army-dark);
+            min-height: 110px; margin-top: auto; /* תמיד יידחף למטה */
+            transition: opacity 0.3s; display: flex; align-items: center; z-index: 5;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .info-panel strong { font-size: 20px; display: block; margin-bottom: 5px; color: var(--army-green); }
+
+        /* ניווט תחתון */
+        .nav-bar {
+            background-color: var(--army-dark); color: white; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 3px solid var(--accent-yellow); border-radius: 0 0 15px 15px;
+        }
+        .nav-btn {
+            background-color: var(--accent-yellow); color: var(--army-dark);
+            border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;
+        }
+        .nav-btn:hover { background-color: #f1c40f; box-shadow: 0 0 15px var(--accent-glow); }
+        .page-indicator { font-weight: bold; font-size: 18px; color: var(--ipad-bg); }
+    </style>
+</head>
+<body>
+
+<div class="ipad-frame">
+    <div class="ipad-screen">
+        
+        <div class="screen-header">
+            <h2 class="screen-title">שיתוף בין-זרועי ובין-ארגוני</h2>
+            <p class="screen-intro">שדה הקרב המודרני דורש סנכרון מושלם. לחצו על הגופים השונים במכ"ם כדי להבין את תפקידם וממשק הפעולה שלהם מול כוחות היבשה.</p>
+        </div>
+
+        <div class="radar-wrapper">
+            <div class="radar-container">
+                <div class="radar-ring ring-outer"></div>
+                <div class="radar-ring ring-inner"></div>
+                <div class="radar-sweep"></div>
+
+                <svg class="curved-text-svg" viewBox="0 0 460 460">
+                    <defs>
+                        <path id="curve-outer" d="M 40,230 A 190,190 0 0,1 420,230" />
+                        <path id="curve-inner" d="M 105,230 A 125,125 0 0,1 355,230" />
+                    </defs>
+                    <text fill="#2c3628" font-size="16" font-weight="bold" text-anchor="middle" opacity="0.8">
+                        <textPath href="#curve-outer" startOffset="50%">שיתוף בין-ארגוני</textPath>
+                    </text>
+                    <text fill="#4a5c44" font-size="14" font-weight="bold" text-anchor="middle" opacity="0.9">
+                        <textPath href="#curve-inner" startOffset="50%">שיתוף בין-זרועי בשדה הקרב</textPath>
+                    </text>
+                </svg>
+
+                <div class="node node-center" onclick="showInfo('ground')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M19 15H5V13H19M21 11V9H19V7H15V9H9V7H5V9H3V11H1V15H3V17H21V15H23V11M17 11H7V9H17Z"/></svg>
+                    </div>
+                    <span class="node-label" style="font-size: 18px; color: var(--army-green);">כוחות היבשה</span>
+                </div>
+
+                <div class="node node-air" onclick="showInfo('air')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12,2L8,18L12,15L16,18L12,2M12,5.5L14,15.5L12,14L10,15.5L12,5.5Z"/></svg>
+                    </div>
+                    <span class="node-label">חיל האוויר</span>
+                </div>
+
+                <div class="node node-navy" onclick="showInfo('navy')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12,2L14,5H10L12,2M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"/></svg>
+                    </div>
+                    <span class="node-label">חיל הים</span>
+                </div>
+
+                <div class="node node-police" onclick="showInfo('police')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12,2L22,6V11C22,16.5 17.8,21.7 12,23C6.2,21.7 2,16.5 2,11V6L12,2M12,4.3L4,7.4V11C4,15.4 7.4,19.5 12,20.8C16.6,19.5 20,15.4 20,11V7.4L12,4.3Z"/></svg>
+                    </div>
+                    <span class="node-label">משטרת ישראל</span>
+                </div>
+
+                <div class="node node-shabak" onclick="showInfo('shabak')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12,1L21,5V11C21,16.5 17.2,21.7 12,23C6.8,21.7 3,16.5 3,11V5L12,1M12,12A3,3 0 0,1 9,9A3,3 0 0,1 12,6A3,3 0 0,1 15,9A3,3 0 0,1 12,12Z"/></svg>
+                    </div>
+                    <span class="node-label">שב"כ</span>
+                </div>
+
+                <div class="node node-rescue" onclick="showInfo('rescue')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M10.5,2H13.5V8.5H20V11.5H13.5V18H10.5V11.5H4V8.5H10.5V2Z"/></svg>
+                    </div>
+                    <span class="node-label">כוחות הצלה</span>
+                </div>
+
+                <div class="node node-civil" onclick="showInfo('civil')">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24"><path d="M17,11V3H7V4H3V21H21V11H17M7,19H5V17H7V19M7,15H5V13H7V15M7,11H5V9H7V11M7,7H5V5H7V7M11,19H9V17H11V19M11,15H9V13H11V15M11,11H9V9H11V11M11,7H9V5H11V7M15,19H13V17H15V19M15,15H13V13H15V15M15,11H13V9H15V11M15,7H13V5H15V7M19,19H17V17H19V19M19,15H17V13H19V15Z"/></svg>
+                    </div>
+                    <span class="node-label">גופים אזרחיים</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="info-box" class="info-panel" style="background: rgba(212, 160, 23, 0.15);">
+            <div style="width: 100%;">
+                <strong>הנחיות:</strong>
+                לחצו על סמלי המכ"ם כדי לחשוף את ההסברים לפעילות המשותפת של הגופים השונים עם כוחות היבשה בשדה הקרב.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-bar">
+        <button class="nav-btn" onclick="alert('חזור תעבוד בלומדה המלאה')">◀ אחורה</button>
+        <span class="page-indicator">מסך 7 מתוך 9</span>
+        <button class="nav-btn" onclick="alert('קדימה תעבוד בלומדה המלאה')">קדימה ▶</button>
+    </div>
+</div>
+
+<script>
+    const explanations = {
+        'ground': "<strong>כוחות היבשה (המרכז):</strong><br> הגרעין המרכזי הפועל בתווך היבשתי לביצוע המשימה. תכליתו הכרעה, כיבוש שטח ופגיעה ישירה במרכזי הכובד של האויב.",
+        'air': "<strong>חיל האוויר (זרועי):</strong><br> מספק סיוע צמוד באש, איסוף מודיעין מעמיק מהאוויר, תובלה של ציוד וכוחות, ופינוי מהיר של פצועים מעומק הלחימה.",
+        'navy': "<strong>חיל הים (זרועי):</strong><br> אחראי לאבטחת האגף הימי, ביצוע הפגזות וסיוע באש מהים אל החוף, והנחתת כוחות מיוחדים או תספוקת דרך הים.",
+        'police': "<strong>משטרת ישראל (ארגוני):</strong><br> אחראית על ביטחון הפנים, אבטחת צירי תנועה עורפיים לשיירות לוגיסטיות, וטיפול באוכלוסייה אזרחית במרחב הלחימה.",
+        'shabak': "<strong>שירות הביטחון הכללי - שב\"כ (ארגוני):</strong><br> מספק מודיעין מסכל איכותי, מבצע חקירות בשטח לשבויים, ופועל לסיכול תשתיות טרור במרחב הפעולה.",
+        'rescue': "<strong>כוחות הצלה - מד\"א וכיבוי אש (ארגוני):</strong><br> חבירה לכוחות פיקוד העורף והרפואה הצבאית לשם חילוץ, מתן מענה לאירועי הרס, וטיפול באירועים רבי-נפגעים.",
+        'civil': "<strong>גופים אזרחיים ורשויות (ארגוני):</strong><br> רשויות מקומיות, חברת חשמל ותשתיות לאומיות הפועלות יחד עם הצבא כדי לשמור על רציפות תפקודית בעורף תוך כדי המערכה."
+    };
+
+    function showInfo(part) {
+        const infoBox = document.getElementById('info-box');
+        
+        // אנימציית דעיכה קלה כשהטקסט מתחלף
+        infoBox.style.opacity = '0';
+        setTimeout(() => {
+            // החלפת צבע הרקע ללבן אחרי הלחיצה הראשונה (למען הקריאות)
+            infoBox.style.background = 'white'; 
+            infoBox.innerHTML = `<div style="width: 100%;">${explanations[part]}</div>`;
+            infoBox.style.opacity = '1';
+        }, 150);
+    }
+</script>
+</body>
+</html>

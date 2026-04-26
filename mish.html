@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>עמוד 5 - משוואת הסינרגיה</title>
+    <style>
+        /* === הגדרות צבעים ועיצוב כללי מהלומדה המקורית === */
+        :root {
+            --bg-body: #d3d9d3;
+            --ipad-bg: #fdfbf7;
+            --army-green: #4a5c44;
+            --army-dark: #2c3628;
+            --army-light: #8b9c84;
+            --accent-yellow: #d4a017;
+            --accent-glow: rgba(212, 160, 23, 0.6);
+            --text-dark: #2b2b2b;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-color: var(--bg-body);
+            background-image: url('bg-map.jpg'); background-size: cover; background-position: center;
+            display: flex; justify-content: center; align-items: center;
+            background-attachment: fixed;
+        }
+
+        /* === מסגרת האייפד - פרופורציות מקוריות במדויק === */
+        .ipad-frame {
+            width: 100%; max-width: 1200px; height: 90vh; min-height: 700px;
+            background-color: #111; 
+            border-radius: 30px; padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.2);
+            position: relative; display: flex; flex-direction: column;
+        }
+        
+        .ipad-screen {
+            flex: 1; background-color: var(--ipad-bg);
+            border-radius: 15px; overflow: hidden; position: relative;
+            display: flex; flex-direction: column;
+        }
+
+        /* מסך פנימי */
+        .screen {
+            display: flex; width: 100%; height: 100%;
+            flex-direction: column; padding: 20px 30px;
+            overflow-y: auto;
+        }
+
+        /* === סרגל ניווט תחתון (מקורי) === */
+        .nav-bar {
+            background-color: var(--army-dark); color: white;
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;
+            border-top: 3px solid var(--accent-yellow);
+            border-radius: 0 0 15px 15px;
+        }
+        .nav-btn {
+            background-color: var(--accent-yellow); color: var(--army-dark);
+            border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 16px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .nav-btn:hover { background-color: #f1c40f; box-shadow: 0 0 15px var(--accent-glow); }
+        .page-indicator { font-weight: bold; font-size: 18px; color: var(--ipad-bg); }
+
+        /* === כותרות === */
+        .screen-header {
+            border-bottom: 3px solid var(--army-light);
+            padding-bottom: 15px; margin-bottom: 20px;
+        }
+        .screen-title { color: var(--army-dark); margin: 0 0 10px 0; font-size: 28px; }
+        .screen-intro { font-size: 16px; color: #444; line-height: 1.5; margin: 0; }
+
+        /* === משוואת הסינרגיה === */
+        .synergy-box { 
+            display: flex;
+            flex-direction: row; /* בגלל ה-RTL זה יסדר אותם מימין לשמאל טבעי */
+            justify-content: center; align-items: center; gap: 15px; 
+            margin: 20px 0; padding: 25px; background: white; border-radius: 15px;
+            border: 2px solid var(--army-light); box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
+        }
+
+        .syn-item { 
+            cursor: pointer; transition: transform 0.3s ease;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        
+        .syn-item:hover { transform: scale(1.1); }
+
+        .hex-small { width: 110px; height: auto; transition: filter 0.3s; }
+        .syn-item:hover .hex-small { filter: drop-shadow(0 0 15px var(--accent-yellow)); }
+
+        .hex-big { width: 160px; height: auto; } /* גודל הצק"מ */
+
+        /* אפקט הפמפום והזוהר לצק"מ */
+        @keyframes pump-glow {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(212, 160, 23, 0.5)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(212, 160, 23, 0.9)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(212, 160, 23, 0.5)); }
+        }
+
+        .tzakam-hex img {
+            animation: pump-glow 2s infinite ease-in-out;
+        }
+
+        .operator { font-size: 55px; font-weight: 900; color: var(--army-green); margin: 0 5px; user-select: none; }
+        .arrow-operator { font-size: 60px; font-weight: 900; color: #8b7335; margin: 0 15px; user-select: none; }
+
+        /* === תיבת המידע === */
+        .info-panel {
+            background: rgba(212, 160, 23, 0.1); border-right: 5px solid var(--accent-yellow); 
+            padding: 20px; font-size: 18px; border-radius: 8px; color: var(--army-dark);
+            min-height: 120px; line-height: 1.5; transition: opacity 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .info-panel strong { display: block; margin-bottom: 5px; font-size: 20px; color: var(--army-green); }
+
+    </style>
+</head>
+<body>
+
+<div class="ipad-frame">
+    <div class="ipad-screen">
+        
+        <div id="screen5" class="screen">
+            <div class="screen-header">
+                <h2 class="screen-title">שילוב בשדה הקרב (איגבור)</h2>
+                <p class="screen-intro">
+                    כל כוח צבאי מסוגל להפיק מעצמו עוצמה נתונה שאופיינית רק לו. איגבור, או סינרגיה, הוא התהליך שבו מצרפים את העוצמות של חילות שונים הפועלים יחד ובתיאום כלפי מטרה אחת. התוצאה: סך העוצמה שתופק מהפעלתם המתואמת יחד תהיה רבה וגדולה משמעותית מאשר אילו כל חיל היה פועל בנפרד כלפי אותה מטרה. במילים פשוטות – השלם גדול מסך חלקיו!<br><br>
+                    כאשר משלבים כוחות מחילות שונים המצוידים באמצעי לחימה שונים לפעולה משותפת, כל כוח יכול להתמקד במשימתו מבלי להידרש לאבטח את עצמו. במצב כזה, כל חיל פנוי להפיק את היעילות המרבית מעוצמתו.
+                </p>
+            </div>
+            
+            <div class="synergy-box">
+                <div class="syn-item" onclick="showDetails(1)">
+                    <img src="hex1.png" alt="חיל התותחנים" class="hex-small">
+                </div>
+                
+                <div class="operator">+</div>
+                
+                <div class="syn-item" onclick="showDetails(2)">
+                    <img src="hex2.png" alt="הנדסה קרבית" class="hex-small">
+                </div>
+                
+                <div class="operator">+</div>
+                
+                <div class="syn-item" onclick="showDetails(3)">
+                    <img src="hex3.png" alt="חי''ר" class="hex-small">
+                </div>
+                
+                <div class="arrow-operator">&#8592;</div>
+                
+                <div class="syn-item tzakam-hex" onclick="showDetails(4)">
+                    <img src="hex4.png" alt="צוות קרב משולב" class="hex-big">
+                </div>
+            </div>
+            
+            <div id="synergy-info" class="info-panel">
+                <strong>העיקרון:</strong> לחצו על חלקי המשוואה למעלה כדי לראות כיצד השילוב הבין-חילי יוצר שלם הגדול מסך חלקיו.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-bar">
+        <button class="nav-btn" id="btn-prev" onclick="alert('חזור')">◀ אחורה</button>
+        <span class="page-indicator" id="page-ind">מסך 5 מתוך 9</span>
+        <button class="nav-btn" id="btn-next" onclick="alert('קדימה')">קדימה ▶</button>
+    </div>
+</div>
+
+<script>
+    function showDetails(part) {
+        const infoBox = document.getElementById('synergy-info');
+        let textContent = "";
+
+        switch(part) {
+            case 1:
+                textContent = "<strong>חיל התותחנים (סיוע קרבי):</strong> תפקידן במשוואה הוא לספק כוח אש מרחוק. על ידי מתן חיפוי ושיתוק מקורות האש של האויב, התותחנים מאפשרים לשאר הכוחות בצוות הקרב להתקדם בבטחה אל עבר היעד, מבלי שייעצרו על ידי אש האויב.";
+                break;
+            case 2:
+                textContent = "<strong>חיל ההנדסה (סיוע קרבי):</strong> בשדה הקרב, הדרך אל האויב רצופה במכשולים, מוקשים ומטענים. כוח ההנדסה הוא זה שפורץ את המכשולים, מנטרל את האיומים ומפלס את הדרך כדי שהכוח המתמרן יוכל להמשיך לנוע קדימה.";
+                break;
+            case 3:
+                textContent = "<strong>חיל הרגלים (מערך מתמרן):</strong> זהו הכוח הפיזי שסוגר טווח, מסתער על יעדי האויב ומטהר אותם מקרוב. בתוך צוות הקרב, החי\"ר גם מספק אבטחה קרובה וחשובה לכלים הכבדים של ההנדסה והסיוע מפני איומים נקודתיים.";
+                break;
+            case 4:
+                textContent = "<strong>צוות קרב משולב: זוהי משוואת הסינרגיה (איגבור) בפעולה!</strong> כאשר משלבים כוחות חי\"ר, הנדסה ותותחנים יחד, כל כוח יכול להתמקד במשימתו מבלי להידרש לאבטח את עצמו, שכן כל כוח מחפה על החסרונות של החיל האחר. התוצאה היא שסך העוצמה המופקת מהפעלתם המתואמת יחד כלפי המטרה, גדולה משמעותית מאשר אם כל כוח היה פועל בנפרד.";
+                break;
+        }
+
+        infoBox.style.opacity = '0';
+        setTimeout(() => {
+            infoBox.style.background = 'white';
+            infoBox.innerHTML = textContent;
+            infoBox.style.opacity = '1';
+        }, 150);
+    }
+</script>
+</body>
+</html>

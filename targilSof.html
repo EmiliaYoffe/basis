@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגיל מסכם - 10 שאלות</title>
+    <style>
+        :root {
+            --ipad-bg: #fdfbf7;
+            --army-green: #4a5c44;
+            --army-dark: #2c3628;
+            --army-light: #8b9c84;
+            --accent-yellow: #d4a017;
+            --accent-glow: rgba(212, 160, 23, 0.8);
+            --success: #3b8c4c;
+            --error: #b33939;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-color: #d3d9d3;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .ipad-frame {
+            width: 100%; max-width: 1100px; height: 90vh; min-height: 750px;
+            background-color: #111; border-radius: 30px; padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; position: relative;
+        }
+
+        .ipad-screen {
+            flex: 1; background-color: var(--ipad-bg);
+            border-radius: 15px 15px 0 0; position: relative;
+            display: flex; flex-direction: column; padding: 20px 30px; overflow: hidden;
+        }
+
+        .numeric-timer {
+            position: absolute; top: 20px; left: 30px;
+            background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 8px;
+            border: 2px solid var(--army-green); font-size: 22px; font-weight: bold; color: var(--error);
+            z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .screen-header {
+            position: relative; padding-bottom: 20px; margin-bottom: 20px;
+            border-bottom: 3px solid var(--army-light);
+        }
+
+        .helicopter-tracker {
+            transform: scaleX(-1);
+            position: absolute; bottom: -35px; left: 0%; width: 80px; z-index: 10;
+            transition: left 480s linear; /* 480 שניות = 8 דקות */
+        }
+        .helicopter-tracker img {
+            width: 100%; transform: scaleX(-1);
+            animation: hoverHeli 2s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes hoverHeli {
+            from { transform: translateY(-3px); }
+            to { transform: translateY(3px); }
+        }
+
+        .q-tracker { display: flex; gap: 8px; margin-bottom: 20px; justify-content: center; }
+        .q-dot { width: 16px; height: 16px; border-radius: 50%; background: #ccc; border: 2px solid white; transition: 0.3s; }
+        .q-dot.active { background: var(--accent-yellow); transform: scale(1.2); }
+        .q-dot.correct { background: var(--success); }
+        .q-dot.wrong { background: var(--error); }
+
+        .exercise-container {
+            background: white; padding: 25px; border-radius: 12px; border: 2px solid var(--army-light); 
+            flex: 1; display: flex; flex-direction: column;
+        }
+        
+        .question-box {
+            background: #fdfbf7; border-right: 6px solid var(--army-dark);
+            padding: 20px; margin-bottom: 25px; border-radius: 5px; font-weight: bold; font-size: 20px;
+        }
+
+        .options-box { display: flex; flex-direction: column; gap: 12px; }
+        .opt-btn {
+            background: rgba(139, 156, 132, 0.1); padding: 15px 20px; 
+            border: 2px solid var(--army-light); border-radius: 8px; font-size: 18px; 
+            cursor: pointer; text-align: right; transition: 0.2s;
+        }
+        .opt-btn:hover:not(:disabled) { background: var(--army-green); color: white; }
+        .opt-btn.correct { background: var(--success) !important; color: white !important; }
+        .opt-btn.wrong { background: var(--error) !important; color: white !important; }
+
+        .nav-bar {
+            background-color: var(--army-dark); color: white; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 15px 15px;
+        }
+        .nav-btn { background-color: var(--accent-yellow); color: var(--army-dark); border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+        .modal-overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000; border-radius: 15px;
+        }
+        .modal-box {
+            background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px;
+            text-align: center; border: 4px solid var(--accent-yellow);
+        }
+        .modal-btns { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
+        .modal-btn { padding: 12px 30px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="ipad-frame">
+    <div class="ipad-screen">
+        <div class="numeric-timer" id="timer-display">08:00</div>
+        
+        <div class="screen-header">
+            <h2 style="color: var(--army-dark);">תרגיל מסכם</h2>
+            <p>ענה על השאלות הבאות. יש לך 8 דקות להשלים את התרגיל.</p>
+            <div class="helicopter-tracker" id="heli-tracker">
+                <img src="helicopters.png" alt="מסוק">
+            </div>
+        </div>
+
+        <div class="q-tracker" id="dots-container"></div>
+
+        <div class="exercise-container">
+            <div class="question-box" id="q-text"></div>
+            <div class="options-box" id="options-container"></div>
+        </div>
+
+        <div class="modal-overlay" id="summary-modal">
+            <div class="modal-box">
+                <h2 id="modal-title">התרגיל הושלם!</h2>
+                <p id="score-text"></p>
+                <div class="modal-btns">
+                    <button class="modal-btn" style="background: var(--army-light); color: white;" onclick="restartExercise()">התחל מחדש</button>
+                    <button class="modal-btn" style="background: var(--success); color: white;" onclick="alert('ממשיך לעמוד הבא...')">המשך</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="nav-bar">
+        <span></span>
+        <span id="page-ind">תרגיל מסכם</span>
+        <span></span>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { q: "ממה מורכב המערך הלוחם בכוחות היבשה?", opts: ["מערך הסיוע המנהלתי והלוגיסטיקה", "כלל היחידות העוסקות בסיוע לא קרבי", "מהמערך המתמרן ומערך הסיוע הקרבי", "מכוחות אוויר וים בלבד"], ans: 2 },
+        { q: "מהו תפקידו העיקרי של המערך המתמרן?", opts: ["לספק לחימה רצופה ואורך נשימה", "לבצע משימות בשטח בעזרת מהלכי תמרון להשמדת אויב", "להעניק סיוע על ידי תותחנים ותקשוב", "לנהל מבצעי מודיעין עצמאיים"], ans: 1 },
+        { q: "אילו כוחות נכללים תחת \"מערך הסיוע הקרבי\"?", opts: ["יחידות הספקה, רפואה ואחזקה", "רק יחידות של חיל האוויר וחיל הים", "כוחות המעניקים סיוע בלחימה: אש, הנדסה, מודיעין, אוויר ותקשוב", "כוחות שריון וחי\"ר ממוכן בלבד"], ans: 2 },
+        { q: "מהי משמעות ה\"סינרגיה\" (איגבור) בשדה הקרב?", opts: ["כל חיל מפיק עוצמה ללא תלות באחרים", "צירוף עוצמת החילות להפקת עוצמה רבה יותר מהפעלתם בנפרד", "הפרדת כוחות מלאה למניעת פגיעה הדדית", "הפעלת אש אווירית לפני כניסת כוחות יבשה"], ans: 1 },
+        { q: "איזה גורם משפיע על הרכב צוות הקרב המשולב?", opts: ["המתאר - מאפייני המשימה, השטח והאויב", "כמות האספקה הלוגיסטית השנתית", "שנת הייצור של כלי הרכב", "סוג התקשורת האזרחית"], ans: 0 },
+        { q: "כיצד בא לידי ביטוי עקרון \"אחדות הפיקוד\"?", opts: ["כפיפות כפולה למפקד האורגני ולמפקד הצק\"מ", "פיקוד שווה בין כל מפקדי החילות", "כפיפות של כלל היחידות למפקד הצק\"מ בלבד בעת המשימה", "פיקוד בלעדי של חיל האוויר"], ans: 2 },
+        { q: "מה יקרה אם תתבצע הפעלת צוות קרב שאינו הולם את הבעיה המבצעית?", opts: ["הפעלה נכונה המסתמכת על גמישות", "הצוות יתאים עצמו תוך כדי תנועה", "מתכון לכישלון - יש לבחון תמיד התאמה למשימה", "המערך המנהלתי יחפה על החסרונות"], ans: 2 },
+        { q: "מהי המהות של \"שיתוף בין זרועי\"?", opts: ["שיתוף פעולה בין רגלים לשריון באותו גדוד", "ביצוע משימה על ידי שתי זרועות או יותר תחת מפקדה אחת", "פעולה משותפת של צבאות זרים בלבד", "סיוע הדדי בין לוגיסטיקה לרפואה באוגדה"], ans: 1 },
+        { q: "מתי נדרש \"שיתוף בין ארגוני\"?", opts: ["כדי להעביר פיקוד מלא למשטרה בשגרה", "כשהמציאות מחייבת גיוס משאבי מדינה וארגונים נוספים", "רק למניעת לחימה בשטח בנוי", "כשצה\"ל אינו מוסמך להפעיל סיוע קרבי"], ans: 1 },
+        { q: "בשיתוף בין ארגוני, איך מיושם כלל \"שמירת העצמאות\"?", opts: ["כל ארגון קובע מטרה ללא תלות באחרים", "אין תקשורת ומידע משותף", "המפקד קובע את המטרה והגוף הפועל קובע את השיטה המקצועית", "כל גוף מקבל חזית נפרדת לחלוטין"], ans: 2 }
+    ];
+
+    let currentQ = 0, score = 0, activeTimer = null, timeLeft = 480;
+
+    function init() {
+        const container = document.getElementById('dots-container');
+        container.innerHTML = '';
+        questions.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'q-dot';
+            dot.id = `dot-${i}`;
+            container.appendChild(dot);
+        });
+        startTimer();
+        loadQuestion();
+    }
+
+    function startTimer() {
+        if(activeTimer) clearInterval(activeTimer);
+        timeLeft = 480;
+        const heli = document.getElementById('heli-tracker');
+        heli.style.transition = 'none';
+        heli.style.left = '0%';
+        setTimeout(() => {
+            heli.style.transition = 'left 480s linear';
+            heli.style.left = 'calc(100% - 80px)';
+        }, 50);
+
+        activeTimer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+            let s = (timeLeft%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+            if(timeLeft <= 0) { clearInterval(activeTimer); alert('נגמר הזמן!'); }
+        }, 1000);
+    }
+
+    function loadQuestion() {
+        if(currentQ >= questions.length) { finish(); return; }
+        document.querySelectorAll('.q-dot').forEach(d => d.classList.remove('active'));
+        document.getElementById(`dot-${currentQ}`).classList.add('active');
+        const q = questions[currentQ];
+        document.getElementById('q-text').innerText = q.q;
+        const opts = document.getElementById('options-container');
+        opts.innerHTML = '';
+        q.opts.forEach((o, i) => {
+            const b = document.createElement('button');
+            b.className = 'opt-btn';
+            b.innerText = o;
+            b.onclick = () => check(i, b);
+            opts.appendChild(b);
+        });
+    }
+
+    function check(idx, btn) {
+        document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+        const correct = questions[currentQ].ans;
+        if(idx === correct) {
+            btn.classList.add('correct');
+            document.getElementById(`dot-${currentQ}`).classList.add('correct');
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            document.querySelectorAll('.opt-btn')[correct].classList.add('correct');
+            document.getElementById(`dot-${currentQ}`).classList.add('wrong');
+        }
+        setTimeout(() => { currentQ++; loadQuestion(); }, 1500);
+    }
+
+    function finish() {
+        clearInterval(activeTimer);
+        document.getElementById('summary-modal').style.display = 'flex';
+        document.getElementById('score-text').innerText = `ענית נכונה על ${score} מתוך 10 שאלות.`;
+    }
+
+    function restartExercise() {
+        currentQ = 0; score = 0;
+        document.getElementById('summary-modal').style.display = 'none';
+        init();
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגיל: שיוך למערכים</title>
+    <style>
+        /* === הגדרות בסיס וצבעים === */
+        :root {
+            --ipad-bg: #fdfbf7;
+            --army-green: #4a5c44;
+            --army-dark: #2c3628;
+            --army-light: #8b9c84;
+            --accent-yellow: #d4a017;
+            --accent-glow: rgba(212, 160, 23, 0.8);
+            --success: #3b8c4c;
+            --error: #b33939;
+            /* צבעים ייעודיים למערכים */
+            --maneuver-color: rgba(179, 57, 57, 0.15); /* אדמדם למתמרן */
+            --support-color: rgba(212, 160, 23, 0.15); /* צהבהב לסיוע קרבי */
+            --admin-color: rgba(52, 73, 94, 0.15);    /* כחלחל למנהלתי */
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-color: #d3d9d3;
+            background-image: url('bg-map.jpg'); background-size: cover; background-position: center;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* === מסגרת האייפד === */
+        .ipad-frame {
+            width: 100%; max-width: 1200px; height: 90vh; min-height: 750px;
+            background-color: #111; border-radius: 30px; padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; position: relative;
+        }
+        .ipad-screen {
+            flex: 1; background-color: var(--ipad-bg); border-radius: 15px 15px 0 0; position: relative;
+            display: flex; flex-direction: column; padding: 20px 30px; overflow: hidden;
+        }
+
+        /* === טיימר מספרי (2 דקות) === */
+        .numeric-timer {
+            position: absolute; top: 20px; left: 30px;
+            background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 8px;
+            border: 2px solid var(--army-green); font-size: 22px; font-weight: bold; color: var(--error);
+            z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* === כותרת ופס המסוק === */
+        .screen-header {
+            position: relative; padding-bottom: 20px; margin-bottom: 25px;
+            border-bottom: 3px solid var(--army-light);
+        }
+        .screen-title { color: var(--army-dark); margin: 0 0 5px 0; font-size: 28px; }
+        .screen-intro { font-size: 16px; color: #444; line-height: 1.4; margin: 0; width: 80%;}
+
+        /* המסוק */
+        .helicopter-tracker {
+            position: absolute; bottom: -35px; left: 0%; width: 80px; z-index: 10;
+            transition: left 90s linear; /* 120 שניות = 2 דקות */
+        }
+        .helicopter-tracker img {
+            width: 100%; transform: scaleX(-1);
+            animation: flyHeli 90s linear forwards, hoverHeli 2s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes hoverHeli {
+            from { transform: scaleX(-1) translateY(-3px); }
+            to { transform: scaleX(-1) translateY(3px); }
+        }
+
+        /* === אזור העבודה המרכזי === */
+        .main-workspace {
+            display: flex; flex-direction: column; flex: 1; gap: 30px;
+        }
+
+        /* אזורי הגרירה (המערכים) */
+        .dnd-arrays { display: flex; gap: 20px; justify-content: space-between; flex: 1; min-height: 220px; }
+        
+        .array-zone {
+            flex: 1; border: 3px dashed var(--army-light); border-radius: 12px; padding: 15px;
+            display: flex; flex-direction: column; align-items: center; transition: 0.3s;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.03);
+            position: relative;
+        }
+        .array-zone h3 { 
+            margin-top: 0; color: var(--army-dark); border-bottom: 2px solid var(--accent-yellow); 
+            padding-bottom: 5px; font-size: 20px; text-align: center; width: 80%;
+        }
+        
+        /* צבעי רקע מיוחדים לכל אזור */
+        #az-maneuver { background: var(--maneuver-color); }
+        #az-support { background: var(--support-color); }
+        #az-admin { background: var(--admin-color); }
+
+        .array-zone.drag-over { border-color: var(--accent-yellow); transform: scale(1.03); box-shadow: 0 0 20px var(--accent-glow); }
+        
+        /* אזור להנחת הפריטים בתוך כל מערך */
+        .drop-container {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%; margin-top: 10px;
+        }
+
+        /* בנק הסטמ"ים (מחסן למטה) */
+        .stam-bank {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 25px; padding: 25px;
+            background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); 
+            border: 2px solid var(--army-light);
+        }
+
+        /* פריט נגרר (סט"ם + כיתוב) */
+        .stam-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 100px; padding: 10px; background: white; border-radius: 10px;
+            border: 2px solid var(--army-light); cursor: grab; transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stam-item:active { cursor: grabbing; transform: scale(1.1) rotate(2deg); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+        .stam-item img { width: 70px; height: 50px; object-fit: contain; margin-bottom: 8px; }
+        .stam-label { font-weight: bold; font-size: 15px; color: var(--army-dark); background: #eee; padding: 2px 10px; border-radius: 12px; }
+
+        .stam-item.dropped { border-color: var(--army-green); background: rgba(255,255,255,0.8); cursor: default; }
+        .stam-item.dropped:active { transform: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* === סרגל ניווט תחתון === */
+        .nav-bar {
+            background-color: var(--army-dark); color: white; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 3px solid var(--accent-yellow); border-radius: 0 0 15px 15px;
+        }
+        .nav-btn {
+            background-color: var(--accent-yellow); color: var(--army-dark);
+            border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;
+        }
+        .nav-btn:hover { background-color: #f1c40f; box-shadow: 0 0 15px var(--accent-glow); }
+        .nav-btn.hidden { visibility: hidden; pointer-events: none; }
+        .page-indicator { font-weight: bold; font-size: 18px; color: var(--ipad-bg); }
+
+        /* === פופ-אפים (מודאלים) === */
+        .modal-overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000;
+            border-radius: 15px; opacity: 0; transition: 0.3s;
+        }
+        .modal-box {
+            background: var(--ipad-bg); padding: 30px; border-radius: 15px; width: 90%; max-width: 550px;
+            text-align: center; border: 4px solid var(--accent-yellow); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: scale(0.8); transition: 0.3s; display: flex; flex-direction: column; align-items: center;
+        }
+        .modal-box h2 { margin-top: 0; font-size: 28px; }
+        .modal-box p { font-size: 18px; line-height: 1.6; text-align: center; color: var(--text-dark); margin-bottom: 25px;}
+        
+        .modal-box.error-box { border-color: var(--error); }
+        .modal-box.error-box h2 { color: var(--error); }
+        
+        .modal-box.success-box { border-color: var(--success); }
+        .modal-box.success-box h2 { color: var(--success); font-size: 36px; }
+
+        .btn-close-modal {
+            background: var(--army-dark); color: white; border: none; padding: 12px 35px;
+            font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-close-modal:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+<div class="ipad-frame">
+    <div class="ipad-screen">
+        
+        <div class="numeric-timer" id="timer-display">02:00</div>
+        
+        <div class="screen-header">
+            <h2 class="screen-title">תרגיל: שיוך למערכים</h2>
+            <p class="screen-intro">בחן את עצמך: לאיזה מערך שייך כל כוח? גרור את הסמלים (הסטמ"ים) מהבנק למטה לתוך המערך המתאים להם. יש לך 2 דקות להשלים את המשימה.</p>
+            
+            <div class="helicopter-tracker" id="heli-tracker">
+                <img src="helicopters.png" alt="מסוק">
+            </div>
+        </div>
+
+        <div class="main-workspace">
+            <div class="dnd-arrays">
+                <div class="array-zone" id="az-admin" data-type="admin">
+                    <h3>מערך הסיוע המנהלתי</h3>
+                    <div class="drop-container" data-type="admin"></div>
+                </div>
+                <div class="array-zone" id="az-support" data-type="support">
+                    <h3>מערך הסיוע הקרבי</h3>
+                    <div class="drop-container" data-type="support"></div>
+                </div>
+                <div class="array-zone" id="az-maneuver" data-type="maneuver">
+                    <h3>המערך המתמרן</h3>
+                    <div class="drop-container" data-type="maneuver"></div>
+                </div>
+            </div>
+            
+            <div class="stam-bank" id="stam-bank">
+                <div class="stam-item" draggable="true" id="stam-1" data-type="maneuver" data-name="חי''ר">
+                    <img src="sym-infantry.png" alt="חי''ר">
+                    <span class="stam-label">חי"ר</span>
+                </div>
+                <div class="stam-item" draggable="true" id="stam-2" data-type="maneuver" data-name="שריון">
+                    <img src="sym-armor.png" alt="שריון">
+                    <span class="stam-label">שריון</span>
+                </div>
+                <div class="stam-item" draggable="true" id="stam-3" data-type="support" data-name="הנדסה">
+                    <img src="sym-engineer.png" alt="הנדסה">
+                    <span class="stam-label">הנדסה</span>
+                </div>
+                <div class="stam-item" draggable="true" id="stam-4" data-type="support" data-name="תותחנים">
+                    <img src="sym-support.png" alt="תותחנים">
+                    <span class="stam-label">תותחנים</span>
+                </div>
+                <div class="stam-item" draggable="true" id="stam-5" data-type="admin" data-name="לוגיסטיקה">
+                    <img src="sym-logistics.png" alt="לוגיסטיקה">
+                    <span class="stam-label">לוגיסטיקה</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="error-modal">
+            <div class="modal-box error-box">
+                <h2>שיוך טקטי שגוי! ⚠️</h2>
+                <p id="error-text">ההסבר יופיע כאן בהתאם לטעות.</p>
+                <button class="btn-close-modal" style="background-color: var(--error);" onclick="closeModal('error-modal')">הבנתי, חזור לתרגיל</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="success-modal">
+            <div class="modal-box success-box">
+                <h2>מצוין! ✔️</h2>
+                <p>השלמת את שיוך המערכים בהצלחה. כעת הכוחות מאורגנים נכון למשימה, וכל מערך תומך בפעולת המערך המתמרן בצורה אופטימלית.</p>
+                <button class="btn-close-modal" style="background-color: var(--success);" onclick="closeModal('success-modal')">המשך בלומדה</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="timeout-modal">
+            <div class="modal-box error-box">
+                <h2>נגמר הזמן! ⏳</h2>
+                <p>בשדה הקרב, החלטות על ארגון הכוח חייבות להתקבל במהירות. לא הספקת לארגן את המערכים בזמן המוקצב.</p>
+                <button class="btn-close-modal" style="background-color: var(--error);" onclick="location.reload()">נסה שוב</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-bar">
+        <div style="width: 100px;"></div> <span class="page-indicator">תרגיל מערכים - עמוד 3</span>
+        <button class="nav-btn hidden" id="btn-next" onclick="alert('מעבר לעמוד הבא בלומדה')">קדימה ▶️</button>
+    </div>
+</div>
+
+<script>
+    let activeTimer = null;
+    let correctCount = 0;
+    const totalTime = 90; // 2 דקות בשניות
+
+    // === הפעלת טיימר והמסוק ===
+    function startTimer() {
+        let timeLeft = totalTime;
+        const display = document.getElementById('timer-display');
+        const heli = document.getElementById('heli-tracker');
+
+        display.innerText = `02:00`;
+
+        // הפעלת תנועת המסוק (מתוזמן ל-120 שניות ב-CSS)
+        setTimeout(() => { heli.style.left = `calc(100% - 80px)`; }, 100);
+
+        activeTimer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            let s = (timeLeft % 60).toString().padStart(2, '0');
+            display.innerText = `${m}:${s}`;
+
+            if(timeLeft <= 0) {
+                clearInterval(activeTimer);
+                openModal('timeout-modal');
+            }
+        }, 1000);
+    }
+
+    // === ניהול פופ-אפים ===
+    function openModal(id, text = "") {
+        const modal = document.getElementById(id);
+        if (text && id === 'error-modal') document.getElementById('error-text').innerHTML = text;
+        
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.style.opacity = '1';
+            modal.querySelector('.modal-box').style.transform = 'scale(1)';
+        }, 10);
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.opacity = '0';
+        modal.querySelector('.modal-box').style.transform = 'scale(0.8)';
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+
+    // === יצירת ההסבר לטעות בשיוך ===
+    function getErrorExplanation(itemName, actualType, expectedZone) {
+        let zoneName = expectedZone === 'maneuver' ? 'במערך המתמרן' : (expectedZone === 'support' ? 'במערך הסיוע הקרבי' : 'במערך הסיוע המנהלתי');
+        
+        if (actualType === 'maneuver') {
+            return `<strong>${itemName}</strong> שייך ל<strong>מערך המתמרן</strong> (הלוחם בחזית). הצבתו ${zoneName} תשאיר את הכוחות המסתערים ללא יכולת הכרעה ותחשוף את העורף לסיכון מיותר.`;
+        } else if (actualType === 'support') {
+            return `<strong>${itemName}</strong> הוא חלק מ<strong>מערך הסיוע הקרבי</strong>. תפקידו לתמוך את התמרון מאחור (באש או בהנדסה). הצבתו ${zoneName} תפגע ביעילות הסיוע הכולל ותשבש את תורת הלחימה.`;
+        } else if (actualType === 'admin') {
+            return `<strong>${itemName}</strong> שייך ל<strong>מערך הסיוע המנהלתי</strong>. תפקידו לדאוג לרציפות הלחימה (תחמושת, דלק, רפואה) מאחור. הכנסתו ל${zoneName} תכניס דרגים עורפיים לקו האש ותשבש את שרשרת האספקה!`;
+        }
+        return "שיוך לא נכון. נסה שוב.";
+    }
+
+    // === מנגנון גרירה (Drag & Drop) ===
+    const draggables = document.querySelectorAll('.stam-item');
+    const arrayZones = document.querySelectorAll('.array-zone');
+
+    draggables.forEach(item => {
+        item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', e.target.id); });
+    });
+
+    arrayZones.forEach(zone => {
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+
+            const itemId = e.dataTransfer.getData('text/plain');
+            const item = document.getElementById(itemId);
+            
+            // מניעת שגיאה אם נגרר משהו שאינו סט"ם
+            if(!item || !item.classList.contains('stam-item')) return;
+
+            const expectedZoneType = zone.getAttribute('data-type');
+            const actualItemType = item.getAttribute('data-type');
+            const itemName = item.getAttribute('data-name');
+            const dropContainer = zone.querySelector('.drop-container');
+
+            if(actualItemType === expectedZoneType) {
+                // הצלחה: הפריט נוחת במקום
+                dropContainer.appendChild(item);
+                item.classList.add('dropped');
+                item.setAttribute('draggable', 'false'); // ביטול גרירה נוספת
+                correctCount++;
+
+                // בדיקת סיום תרגיל (יש 5 פריטים סך הכל)
+                if(correctCount === 5) {
+                    clearInterval(activeTimer);
+                    document.getElementById('timer-display').style.color = "var(--success)";
+                    
+                    // עצירת המסוק
+                    const heli = document.getElementById('heli-tracker');
+                    heli.style.left = getComputedStyle(heli).left;
+
+                    // הצגת כפתור המשך ופופאפ סיום
+                    document.getElementById('btn-next').classList.remove('hidden');
+                    setTimeout(() => openModal('success-modal'), 500);
+                }
+            } else {
+                // כישלון: הקפצת פופאפ עם הסבר מדויק
+                const explanation = getErrorExplanation(itemName, actualItemType, expectedZoneType);
+                openModal('error-modal', explanation);
+            }
+        });
+    });
+
+    // === אתחול עמוד ===
+    window.onload = () => {
+        // ערבוב הקלפים בבנק כדי שהסדר ישתנה בכל פעם
+        const bank = document.getElementById('stam-bank');
+        for (let i = bank.children.length; i >= 0; i--) {
+            bank.appendChild(bank.children[Math.random() * i | 0]);
+        }
+        startTimer();
+    };
+</script>
+</body>
+</html>

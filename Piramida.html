@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שלב 2 - תרגיל פירמידה משופר</title>
+    <style>
+        /* === הגדרות צבעים בסיסיות === */
+        :root {
+            --ipad-bg: #fdfbf7; 
+            --army-green: #4a5c44;
+            --army-dark: #2c3628;
+            --army-light: #8b9c84;
+            --accent-yellow: #d4a017;
+            --accent-glow: rgba(212, 160, 23, 0.8);
+            --success: #3b8c4c;
+            --error: #b33939;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-color: #d3d9d3;
+            background-image: url('bg-map.jpg'); background-size: cover; background-position: center;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* === מסגרת האייפד === */
+        .ipad-frame {
+            width: 100%; max-width: 1200px; height: 90vh; min-height: 750px;
+            background-color: #111; border-radius: 30px; padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; position: relative;
+        }
+        
+        .ipad-screen {
+            flex: 1; background-color: var(--ipad-bg);
+            border-radius: 15px 15px 0 0; position: relative;
+            display: flex; flex-direction: column; padding: 20px 30px;
+            overflow: hidden;
+        }
+
+        /* === טיימר מספרי (שמאל למעלה) === */
+        .numeric-timer {
+            position: absolute; top: 20px; left: 30px;
+            background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 8px;
+            border: 2px solid var(--army-green); font-size: 22px; font-weight: bold; color: var(--error);
+            z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* === כותרת ופס טיסת המסוק === */
+        .screen-header { 
+            position: relative; padding-bottom: 20px; margin-bottom: 15px; 
+            border-bottom: 3px solid var(--army-light); 
+        }
+        .screen-title { color: var(--army-dark); margin: 0 0 5px 0; font-size: 28px; }
+        .screen-intro { font-size: 16px; color: #444; line-height: 1.4; margin: 0; width: 80%;}
+
+        .helicopter-tracker {
+            transform: scaleX(-1);
+            position: absolute;
+            bottom: -35px; /* ממקם את המסוק על הקו הירוק */
+            left: 0%; /* מתחיל משמאל */
+            width: 80px; /* הגדלנו את המסוק משמעותית */
+            z-index: 10;
+            /* המעבר יקרה במשך 180 שניות בצורה ליניארית ומושלמת */
+            transition: left 90s linear; 
+        }
+
+        .helicopter-tracker img {
+            width: 100%;
+            /* אנימציית הריחוף של המסוק תוך כדי הטיסה הותאמה ל-180 שניות */
+            animation: flyHeli 180s linear forwards; 
+            pointer-events: none;
+        }
+
+        @keyframes hoverHeli { 
+            from { transform: scaleX(-1) translateY(-3px); } 
+            to { transform: scaleX(-1) translateY(3px); } 
+        }
+
+        /* === אזור העבודה המרכזי === */
+        .main-workspace {
+            display: flex; flex: 1; gap: 20px; position: relative;
+        }
+
+        /* אזור תמונת הפירמידה (מוגדר ראשון כדי שיופיע בצד ימין ב-RTL) */
+         .pyramid-area {
+            flex: 1; /* מחזירים ל-1 כדי לשמור על הפרופורציה המקורית */
+            transform: scale(1.1); /* <--- השורה החדשה שמגדילה את כל הבלוק ב-8% */
+            margin-top: 40px;
+            margin-right: 30%; 
+            background-image: url('Piramida.png'); 
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: relative;
+            z-index: 50;
+        }
+
+        /* בנק המילים (מוגדר שני כדי שיופיע בצד שמאל ב-RTL, כמו בתמונה) */
+        .words-bank {
+            width: 200px; /* הוקטן מ-250px */
+            display: flex; flex-direction: column; gap: 10px; /* ריווח קטן יותר */
+            padding-top: 20px; z-index: 5;
+        }
+
+        .draggable-word {
+            width: 150px !important; /* <--- הטאצ'אפ: נועל את הרוחב כך שלא יושפע מהפירמידה */
+            box-sizing: border-box; /* מוודא שהשוליים לא מעוותים את הגודל */
+            margin: 0 auto; /* ממרכז את התיבה בול באמצע אזור ההצבה כשהיא נוחתת */
+            background: var(--army-dark); color: white; padding: 8px; 
+            border-radius: 8px; text-align: center; cursor: grab; font-weight: bold; 
+            border-right: 6px solid var(--accent-yellow); 
+            font-size: 15px; 
+            transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        /* === תיבות ההצבה באלכסון יורד (כמו בציור שלך) === */
+        .drop-box {
+            position: absolute;
+            height: 35px; 
+            width: 130px; /* תוכלי לשנות רוחב כדי שיתאים בול לריבוע הלבן שלך */
+            background: rgba(255,255,255,0.4);
+            border: 2px dashed var(--army-light); 
+            border-radius: 6px;
+            display: flex; justify-content: center; align-items: center; transition: 0.3s;
+        }
+        .drop-box.drag-over { background: var(--accent-glow); border-color: var(--accent-yellow); transform: scale(1.05); }
+        .drop-box.filled { border: none; background: transparent; }
+
+        /* מיקומים מדויקים באלכסון - שחקי פה עם האחוזים עד שזה יישב מושלם על הציור! */
+        /* ככל שה-right קטן יותר, התיבה זזה שמאלה */
+        #drop-1 { top: 3%; right: -2%; }
+        #drop-2 { top: 14%; right: -8%; }
+        #drop-3 { top: 25%; right: -16%; }
+        #drop-4 { top: 36%; right: -22%; }
+        #drop-5 { top: 47%; right: -28%; }
+        #drop-6 { top: 58%; right: -34%; }
+        #drop-7 { top: 69%; right: -40%; }
+        
+        /* === החץ הזוהר (מצביע ימינה, יושב משמאל לטנק) === */
+        .interactive-arrow {
+        position: absolute;
+        bottom: 12%; 
+        left: -20%; 
+        font-size: 70px; /* הגדלנו מ-50 ל-70 כדי לעשות אותו גדול יותר */
+        font-weight: bold; /* הוספנו את השורה הזו כדי להפוך אותו לעבה ומאסיבי */
+        color: var(--accent-yellow); 
+        cursor: pointer;
+        animation: arrowMoveRight 1.5s infinite ease-in-out;
+        z-index: 1000;
+        }
+
+        @keyframes arrowMoveRight {
+            0% { transform: translateX(0); opacity: 0.4; text-shadow: 0 0 5px var(--accent-glow); }
+            50% { transform: translateX(15px); opacity: 1; text-shadow: 0 0 25px var(--accent-yellow), 0 0 5px white; }
+            100% { transform: translateX(0); opacity: 0.4; text-shadow: 0 0 5px var(--accent-glow); }
+        }
+
+        /* === סרגל ניווט תחתון === */
+
+        .nav-bar {
+            background-color: var(--army-dark); color: white; padding: 10px 20px; 
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 3px solid var(--accent-yellow); border-radius: 0 0 15px 15px;
+        }
+        .nav-btn {
+            background-color: var(--accent-yellow); color: var(--army-dark);
+            border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer;
+        }
+        .nav-btn.hidden { visibility: hidden; pointer-events: none; }
+        .page-indicator { font-weight: bold; font-size: 18px; color: var(--ipad-bg); }
+
+        /* === פופ-אפים === */
+        .modal-overlay { 
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 100;
+            border-radius: 15px; opacity: 0; transition: 0.3s;
+        }
+        .modal-box { 
+            background: var(--ipad-bg); padding: 30px; border-radius: 15px; width: 80%; max-width: 600px; 
+            text-align: center; border: 4px solid var(--accent-yellow); box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            transform: scale(0.8); transition: 0.3s;
+        }
+        .modal-box h2 { margin-top: 0; font-size: 28px; }
+        .modal-box p { font-size: 18px; line-height: 1.6; text-align: right; color: var(--text-dark);}
+        
+        .modal-box.error-box { border-color: var(--error); }
+        .modal-box.error-box h2 { color: var(--error); text-align: center;}
+        
+        .btn-close-modal { 
+            background: var(--army-dark); color: white; border: none; padding: 10px 30px; 
+            font-size: 18px; border-radius: 8px; cursor: pointer; margin-top: 20px; transition: 0.2s;
+        }
+        .btn-close-modal:hover { transform: scale(1.05); }
+
+        /* עיצוב המודאלים (פופאפים) */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: flex; justify-content: center;
+            align-items: center; z-index: 2000; border-radius: 15px;
+        }
+        .modal-content {
+            background: var(--ipad-bg); padding: 30px; border-radius: 12px;
+            text-align: center; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .modal button { margin-top: 15px; width: 100%; }
+
+    </style>
+</head>
+<body>
+
+<div class="ipad-frame">
+    <div class="ipad-screen">
+        
+        <!-- טיימר מספרי (שמאל למעלה) -->
+        <div class="numeric-timer" id="timer-display">05:00</div>
+
+        <!-- כותרת ופס המסוק -->
+        <div class="screen-header">
+            <h2 class="screen-title">המבנה הבסיסי של כוחות היבשה</h2>
+            <p class="screen-intro">המבנה הבסיסי הוא מדרגי (מחוליה ועד פיקוד מרחבי) ונועד לתת מענה למוטת השליטה. גרור את הדרגים למקומם על גבי הפירמידה, מהגבוה לנמוך.</p>
+            
+            <!-- המסוק שטס בצורה חלקה על הפס הירוק -->
+            <div class="helicopter-tracker" id="heli-tracker">
+                <img src="helicopters.png" alt="מסוק">
+            </div>
+        </div>
+
+        <div class="main-workspace">
+            
+            <!-- אזור תמונת הפירמידה (מופיע ראשון ב-RTL ולכן יושב בצד ימין) -->
+            <div class="pyramid-area">
+                
+                <!-- החץ הזוהר שמצביע למטה (על הטנק משמאל למטה) -->
+                <div class="interactive-arrow" onclick="openModal('cube-modal')">➡</div>
+
+
+
+                <!-- תיבות ההצבה המסודרות באלכסון יורד -->
+                <div class="drop-box" id="drop-1" data-id="1"></div>
+                <div class="drop-box" id="drop-2" data-id="2"></div>
+                <div class="drop-box" id="drop-3" data-id="3"></div>
+                <div class="drop-box" id="drop-4" data-id="4"></div>
+                <div class="drop-box" id="drop-5" data-id="5"></div>
+                <div class="drop-box" id="drop-6" data-id="6"></div>
+                <div class="drop-box" id="drop-7" data-id="7"></div>
+
+            </div>
+
+            <!-- בנק המילים (מופיע שני ב-RTL ולכן יושב בצד שמאל) -->
+            <div class="words-bank" id="words-bank">
+                <div class="draggable-word" draggable="true" id="w-5" data-id="5">גדוד</div>
+                <div class="draggable-word" draggable="true" id="w-2" data-id="2">גיס</div>
+                <div class="draggable-word" draggable="true" id="w-7" data-id="7">כיתה / צוות</div>
+                <div class="draggable-word" draggable="true" id="w-4" data-id="4">חטיבה / אגד</div>
+                <div class="draggable-word" draggable="true" id="w-1" data-id="1">פיקוד מרחבי</div>
+                <div class="draggable-word" draggable="true" id="w-3" data-id="3">אוגדה</div>
+                <div class="draggable-word" draggable="true" id="w-6" data-id="6">פלוגה / מחלקה</div>
+            </div>
+
+        </div>
+
+        <!-- פופ-אפ: קוביית היסוד -->
+        <div class="modal-overlay" id="cube-modal">
+            <div class="modal-box">
+                <h2 style="color: var(--army-green);">קוביית היסוד</h2>
+                <p>
+                    יחידה שאינה חלק מהמדרג הרגיל. <b>"קוביית יסוד"</b> הוא כינוי לכוח הקטן ביותר המסוגל לבצע פעולת לחימה שלמה, כגון ניהול אש, חיפוי או הסתערות.<br><br>
+                    לדוגמא, צוות קרב של טנקים וחי"ר המסייעים זה לזה לסירוגין בתיקון אש, בתצפית ובאבטחה הדדית. כל יחידה צבאית היא בפועל מצרף של קוביות יסוד.
+                </p>
+                <button class="btn-close-modal" onclick="closeModal('cube-modal')">הבנתי</button>
+            </div>
+        </div>
+
+        <!-- פופ-אפ: שגיאה בגרירה -->
+        <div class="modal-overlay" id="error-modal">
+            <div class="modal-box error-box">
+                <h2>שיוך שגוי! ❌</h2>
+                <p style="text-align: center;">הדרג שבחרת אינו מתאים למיקום זה במבנה ההיררכי של כוחות היבשה. נסה שנית.</p>
+                <button class="btn-close-modal" onclick="closeModal('error-modal')" style="background-color: var(--error);">חזור לתרגיל</button>
+            </div>
+        </div>
+
+        <!-- פופאפ סיום פירמידה בהצלחה -->
+        <div id="success-modal" class="modal" style="display: none;">
+            <div class="modal-content" style="border: 3px solid var(--success);">
+                <h2 style="color: var(--success); font-size: 28px;">כל הכבוד!</h2>
+                <p style="font-size: 18px;">השלמת את מבנה כוחות היבשה בהצלחה!</p>
+                <button class="nav-btn" onclick="document.getElementById('success-modal').style.display='none'" style="background-color: var(--success); color: white;">המשך</button>
+            </div>
+        </div>
+
+        <!-- פופאפ נגמר הזמן -->
+        <div id="timeout-modal" class="modal" style="display: none;">
+            <div class="modal-content" style="border: 3px solid var(--error);">
+                <h2 style="color: var(--error); font-size: 28px;">נגמר הזמן!</h2>
+                <p style="font-size: 18px;">לא הספקת לסיים את התרגיל בזמן. נסה שוב!</p>
+                <button class="nav-btn" onclick="location.reload()" style="background-color: var(--error); color: white;">נסה שוב</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- סרגל ניווט תחתון -->
+    <div class="nav-bar">
+        <button class="nav-btn hidden" id="btn-prev">◀️ אחורה</button>
+        <span class="page-indicator">מסך 2 מתוך 9</span>
+        <button class="nav-btn hidden" id="btn-next">קדימה ▶️</button>
+    </div>
+    </div>
+    
+</div>
+
+<script>
+    let activeTimer = null;
+    let correctCount = 0;
+    const totalTime = 90; // 3 minutes
+
+    // הפעלת טיימר ותנועת המסוק החלקה
+    function startTimer() {
+        let timeLeft = totalTime;
+        const display = document.getElementById('timer-display');
+        const heli = document.getElementById('heli-tracker');
+        
+        display.innerText = `01:30`;
+        
+        // מפעיל את האנימציה החלקה של המסוק משמאל לימין באמצעות CSS!
+        setTimeout(() => {
+            heli.style.left = `calc(100% - 80px)`;
+        }, 100);
+        
+        // הטיימר המספרי ממשיך לרדת
+        activeTimer = setInterval(() => {
+            timeLeft--;
+            
+            let m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+            let s = (timeLeft%60).toString().padStart(2,'0');
+            display.innerText = `${m}:${s}`;
+            
+            if(timeLeft <= 0) {
+                clearInterval(activeTimer);
+                document.getElementById('timeout-modal').style.display = 'flex';
+            }
+        }, 1000);
+    }
+
+    // ניהול מודאלים
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.display = 'flex';
+        setTimeout(() => { 
+            modal.style.opacity = '1'; 
+            modal.querySelector('.modal-box').style.transform = 'scale(1)'; 
+        }, 10);
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.style.opacity = '0';
+        modal.querySelector('.modal-box').style.transform = 'scale(0.8)';
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+
+    // מנגנון גרירה
+    const draggables = document.querySelectorAll('.draggable-word');
+    const dropBoxes = document.querySelectorAll('.drop-box');
+
+    draggables.forEach(item => { 
+        item.addEventListener('dragstart', e => { 
+            e.dataTransfer.setData('text/plain', e.target.id); 
+        }); 
+    });
+
+    dropBoxes.forEach(box => {
+        box.addEventListener('dragover', e => { 
+            e.preventDefault(); 
+            if(!box.classList.contains('filled')) box.classList.add('drag-over'); 
+        });
+        
+        box.addEventListener('dragleave', () => box.classList.remove('drag-over'));
+        
+        box.addEventListener('drop', e => {
+            e.preventDefault(); 
+            box.classList.remove('drag-over');
+            if(box.classList.contains('filled')) return;
+            
+            const itemId = e.dataTransfer.getData('text/plain');
+            const item = document.getElementById(itemId);
+            
+            if(item.getAttribute('data-id') === box.getAttribute('data-id')) {
+                box.appendChild(item); 
+                box.classList.add('filled'); 
+                item.classList.add('dropped'); 
+                item.setAttribute('draggable', 'false');
+                correctCount++;
+                
+                if(correctCount === 7) {
+                    clearInterval(activeTimer);
+                    document.getElementById('btn-next').classList.remove('hidden');
+                    // עוצר את המסוק במקום
+                    const heli = document.getElementById('heli-tracker');
+                    heli.style.left = getComputedStyle(heli).left;
+                    
+                    document.getElementById('btn-next').classList.remove('hidden'); 
+                    setTimeout(() => document.getElementById('success-modal').style.display = 'flex');
+                }
+            } else {
+                openModal('error-modal');
+            }
+        });
+    });
+
+    window.onload = () => {
+        const bank = document.getElementById('words-bank');
+        for (let i = bank.children.length; i >= 0; i--) { 
+            bank.appendChild(bank.children[Math.random() * i | 0]); 
+        }
+        startTimer();
+    };
+
+   
+</script>
+</body>
+</html>
